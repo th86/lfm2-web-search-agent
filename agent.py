@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import sys
 import textwrap
+import time
 
 MODEL_ID = "LiquidAI/LFM2.5-230M"
 
@@ -50,6 +51,10 @@ class LocalLFM:
         )
         print(f"[agent] model ready on {self.model.device}.", file=sys.stderr)
 
+        # Running totals for throughput reporting (tokens/sec across the run).
+        self.total_new_tokens = 0
+        self.total_gen_seconds = 0.0
+
     def chat(self, prompt: str, max_new_tokens: int = 512,
              temperature: float = 0.3, stream: bool = False) -> str:
         """Run one user turn through the chat template and return the reply."""
@@ -65,6 +70,7 @@ class LocalLFM:
         streamer = (TextStreamer(self.tokenizer, skip_prompt=True,
                                  skip_special_tokens=True) if stream else None)
 
+        start = time.perf_counter()
         output = self.model.generate(
             input_ids,
             do_sample=temperature > 0,
@@ -75,8 +81,18 @@ class LocalLFM:
             streamer=streamer,
             pad_token_id=self.tokenizer.eos_token_id,
         )
+        elapsed = time.perf_counter() - start
+
         new_tokens = output[0][input_ids.shape[-1]:]
+        self.total_new_tokens += new_tokens.shape[-1]
+        self.total_gen_seconds += elapsed
         return self.tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+
+    def throughput(self) -> float:
+        """Average generated tokens/sec across all chat calls this run."""
+        if self.total_gen_seconds <= 0:
+            return 0.0
+        return self.total_new_tokens / self.total_gen_seconds
 
 
 # --------------------------------------------------------------------------- #
@@ -182,6 +198,12 @@ def run(question: str, num_results: int = DEFAULT_NUM_RESULTS,
     print("\n\nSources:", file=sys.stderr)
     for i, r in enumerate(results, start=1):
         print(f"  [{i}] {r.get('href', '')}", file=sys.stderr)
+
+    print(
+        f"\n⚡ {llm.total_new_tokens} tokens generated in "
+        f"{llm.total_gen_seconds:.1f}s ({llm.throughput():.1f} tokens/sec)",
+        file=sys.stderr,
+    )
 
 
 def main() -> None:

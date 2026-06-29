@@ -48,6 +48,8 @@ uv run agent.py --model LiquidAI/LFM2.5-230M "your question" # pick a model
 - The first run downloads the model from Hugging Face and caches it locally;
   subsequent runs are offline for the model itself (web search still needs a
   connection).
+- Each run ends with a throughput line (`⚡ N tokens generated in Xs (Y tokens/sec)`),
+  measuring local generation speed across the query-rewrite and summarization steps.
 - Output quality is bounded by a 230M model — answers are short and best for
   factual lookups. Swap `--model` for a larger LFM2 variant for richer answers.
 
