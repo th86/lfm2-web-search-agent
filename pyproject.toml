@@ -1,0 +1,25 @@
+[project]
+name = "lfm2-web-search-agent"
+version = "0.1.0"
+description = "Standalone web-search + summarization agent powered by a locally hosted LFM2.5-230M model"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "transformers>=4.46",
+    "torch",
+    "accelerate",
+    "ddgs",
+    "trafilatura",
+    "requests",
+]
+
+[project.scripts]
+lfm2-agent = "agent:main"
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
